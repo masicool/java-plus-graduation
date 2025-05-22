@@ -1,0 +1,29 @@
+spring:
+  sql:
+    init:
+      mode: always
+  jpa:
+    hibernate:
+      ddl-auto: none
+  datasource:
+    driverClassName: org.postgresql.Driver
+    url: jdbc:postgresql://localhost:6541/ewm-stat
+    username: stat
+    password: stat
+
+logging:
+  level:
+    org:
+      springframework:
+        orm:
+          jpa: TRACE
+          JpaTransactionManager: DEBUG
+        transaction: INFO
+    hibernate:
+      sql: DEBUG
+      orm:
+        jdbc:
+          bind: TRACE
+
+server:
+  port: 0

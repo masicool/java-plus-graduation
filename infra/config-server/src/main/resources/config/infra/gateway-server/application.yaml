@@ -1,0 +1,29 @@
+logging:
+  level:
+    ru.yandex.practicum.infra.gateway: INFO
+    org:
+      springframework: INFO
+
+spring:
+  cloud:
+    gateway:
+      discovery:
+        locator:
+          enabled: true
+      routes:
+        - id: main_service_route
+          uri: lb://main-service
+          predicates:
+            - Path=/admin/categories/**, /categories/**,
+              /admin/comments/**, /users/{userId}/comments/**, /comments/**,
+              /admin/compilations/**, /compilations/**,
+              /admin/events/**, /users/{userId}/events/**, /events/**,
+              /users/{userId}/**,
+              /admin/users/**
+        - id: stats_service_route
+          uri: lb://stats-server
+          predicates:
+            - Path=/hit/**, /stats/**
+
+server:
+  port: 8080
