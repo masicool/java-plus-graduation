@@ -22,9 +22,27 @@ services:
     environment:
       - POSTGRES_PASSWORD=main
       - POSTGRES_USER=main
-      - POSTGRES_DB=ewm-main
+      - POSTGRES_DB=postgres
     healthcheck:
       test: pg_isready -q -d $$POSTGRES_DB -U $$POSTGRES_USER
       timeout: 5s
       interval: 5s
       retries: 10
+
+  db-init:
+    image: postgres:16.1
+    container_name: db-init
+    depends_on:
+      ewm-db:
+        condition: service_healthy
+    entrypoint:
+      - bash
+      - -c
+      - |
+        set -e
+        psql postgresql://main:main@ewm-db:5432/postgres -v ON_ERROR_STOP=1 <<-EOSQL
+        create database user_db;
+        create database event_db;
+        create database request_db;
+        create database comment_db;
+        EOSQL

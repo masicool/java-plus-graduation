@@ -11,19 +11,5 @@ spring:
     username: stat
     password: stat
 
-logging:
-  level:
-    org:
-      springframework:
-        orm:
-          jpa: TRACE
-          JpaTransactionManager: DEBUG
-        transaction: INFO
-    hibernate:
-      sql: DEBUG
-      orm:
-        jdbc:
-          bind: TRACE
-
 server:
   port: 0
