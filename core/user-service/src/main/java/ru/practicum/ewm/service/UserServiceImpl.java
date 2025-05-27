@@ -17,7 +17,6 @@ import ru.practicum.ewm.repository.UserRepository;
 import java.util.List;
 
 @Service
-@Transactional
 @RequiredArgsConstructor
 @FieldDefaults(level = AccessLevel.PRIVATE, makeFinal = true)
 public class UserServiceImpl implements UserService {
@@ -25,6 +24,7 @@ public class UserServiceImpl implements UserService {
     ModelMapper modelMapper;
 
     @Override
+    @Transactional
     public UserDto addUser(NewUserRequest newUserRequest) {
         return modelMapper.map(userRepository.save(modelMapper.map(newUserRequest, User.class)), UserDto.class);
     }
@@ -44,6 +44,7 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
+    @Transactional
     public void deleteUserById(long userId) {
         userRepository.findById(userId)
                 .orElseThrow(() -> new NotFoundException("User with id=" + userId + " was not found"));
@@ -51,6 +52,7 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
+    @Transactional(readOnly = true)
     public UserShortDto findUserById(long userId) {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new NotFoundException("User with id=" + userId + " was not found"));
@@ -58,6 +60,7 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
+    @Transactional(readOnly = true)
     public List<UserShortDto> findUsersByIds(List<Long> userIds) {
         return userRepository.findByIdIn(userIds).stream()
                 .map(o -> modelMapper.map(o, UserShortDto.class))

@@ -7,6 +7,7 @@ import ru.practicum.ewm.dto.request.EventRequestShortDto;
 import ru.practicum.ewm.dto.request.Status;
 
 import java.util.List;
+import java.util.Optional;
 
 public interface RequestService {
     List<ParticipationRequestDto> findUserRequests(long userId);
@@ -22,4 +23,6 @@ public interface RequestService {
     List<EventRequestShortDto> findByEventIdInAndStatus(List<Long> eventIds, Status status);
 
     long countByEventIdAndStatus(long eventId, Status status);
+
+    Optional<EventRequestShortDto> findByRequesterIdAndEventId(long userId, long eventId);
 }

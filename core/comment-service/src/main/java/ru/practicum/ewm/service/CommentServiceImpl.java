@@ -34,7 +34,6 @@ import java.util.stream.Collectors;
 @Service
 @RequiredArgsConstructor
 @FieldDefaults(level = AccessLevel.PRIVATE, makeFinal = true)
-@Transactional
 public class CommentServiceImpl implements CommentService {
     CommentRepository commentRepository;
     UserClient userClient;
@@ -67,8 +66,8 @@ public class CommentServiceImpl implements CommentService {
         return CommentMapper.mapToCommentFullDto(commentRepository.save(comment), user);
     }
 
-    @Override
     @Transactional(readOnly = true)
+    @Override
     public CommentFullDto findComment(long commentId) {
         Comment comment = receiveComment(commentId);
         UserShortDto user = receiveUser(comment.getAuthorId());
@@ -89,6 +88,7 @@ public class CommentServiceImpl implements CommentService {
         return comments.stream().map(o -> CommentMapper.mapToCommentFullDto(o, usersMap.get(o.getAuthorId()))).toList();
     }
 
+    @Transactional
     @Override
     public void deleteCommentAdmin(long commentId) {
         commentRepository.deleteById(commentId);
@@ -103,11 +103,13 @@ public class CommentServiceImpl implements CommentService {
         commentRepository.deleteById(commentId);
     }
 
+    @Transactional
     @Override
     public void deleteAllEventCommentsAdmin(long eventId) {
         commentRepository.deleteAllByEventId(eventId);
     }
 
+    @Transactional(readOnly = true)
     @Override
     public List<CommentFullDto> findByEventIdIn(List<Long> eventIds) {
         List<Comment> comments = commentRepository.findByEventIdIn(eventIds);
@@ -116,6 +118,7 @@ public class CommentServiceImpl implements CommentService {
         return CommentMapper.mapToCommentFullDto(comments, usersMap);
     }
 
+    @Transactional(readOnly = true)
     @Override
     public long countByEventId(long eventId) {
         return commentRepository.countByEventId(eventId);

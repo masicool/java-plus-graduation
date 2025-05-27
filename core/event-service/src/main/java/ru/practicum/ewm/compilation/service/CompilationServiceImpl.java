@@ -20,7 +20,6 @@ import ru.practicum.ewm.event.repository.EventRepository;
 import java.util.List;
 
 @Service
-@Transactional
 @RequiredArgsConstructor
 @FieldDefaults(level = AccessLevel.PRIVATE)
 public class CompilationServiceImpl implements CompilationService {
@@ -28,6 +27,7 @@ public class CompilationServiceImpl implements CompilationService {
     final EventRepository eventRepository;
     final ModelMapper modelMapper;
 
+    @Transactional
     @Override
     public CompilationDto addCompilation(NewCompilationDto newCompilationDto) {
         Compilation compilation = modelMapper.map(newCompilationDto, Compilation.class);
@@ -57,6 +57,7 @@ public class CompilationServiceImpl implements CompilationService {
                 .toList();
     }
 
+    @Transactional
     @Override
     public CompilationDto updateCompilation(PatchCompilationDto patchCompilationDto) {
         Compilation compilation = compilationRepository.findById(patchCompilationDto.getId()).orElseThrow();
@@ -73,6 +74,7 @@ public class CompilationServiceImpl implements CompilationService {
         return modelMapper.map(compilation, CompilationDto.class);
     }
 
+    @Transactional
     @Override
     public void deleteCompilationById(long compId) {
         compilationRepository.deleteById(compId);

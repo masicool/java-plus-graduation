@@ -16,18 +16,19 @@ import ru.practicum.ewm.exception.type.NotFoundException;
 import java.util.List;
 
 @Service
-@Transactional
 @RequiredArgsConstructor
 @FieldDefaults(level = AccessLevel.PRIVATE, makeFinal = true)
 public class CategoryServiceImpl implements CategoryService {
     CategoryRepository categoryRepository;
     ModelMapper modelMapper;
 
+    @Transactional
     @Override
     public CategoryDto addCategory(NewCategoryDto newCategoryDto) {
         return modelMapper.map(categoryRepository.save(modelMapper.map(newCategoryDto, Category.class)), CategoryDto.class);
     }
 
+    @Transactional
     @Override
     public CategoryDto updateCategoryById(long catId, NewCategoryDto newCategoryDto) {
         findCategory(catId);
@@ -36,14 +37,15 @@ public class CategoryServiceImpl implements CategoryService {
         return modelMapper.map(categoryRepository.save(categoryToUpdate), CategoryDto.class);
     }
 
+    @Transactional
     @Override
     public void deleteCategoryById(long catId) {
         findCategory(catId);
         categoryRepository.deleteById(catId);
     }
 
-    @Override
     @Transactional(readOnly = true)
+    @Override
     public CategoryDto findCategoryById(long catId) {
         return modelMapper.map(findCategory(catId), CategoryDto.class);
     }

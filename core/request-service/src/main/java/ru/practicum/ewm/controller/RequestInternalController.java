@@ -30,6 +30,6 @@ public class RequestInternalController implements RequestApi {
 
     @Override
     public Optional<EventRequestShortDto> findByRequesterIdAndEventId(long userId, long eventId) {
-        return Optional.empty();
+        return requestService.findByRequesterIdAndEventId(userId, eventId);
     }
 }

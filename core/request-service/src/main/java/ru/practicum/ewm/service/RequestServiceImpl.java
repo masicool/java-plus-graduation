@@ -28,10 +28,10 @@ import ru.practicum.ewm.repository.RequestRepository;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 
 @Service
 @RequiredArgsConstructor
-@Transactional
 @FieldDefaults(level = AccessLevel.PRIVATE, makeFinal = true)
 public class RequestServiceImpl implements RequestService {
 
@@ -146,13 +146,23 @@ public class RequestServiceImpl implements RequestService {
     }
 
     @Override
+    @Transactional(readOnly = true)
     public List<EventRequestShortDto> findByEventIdInAndStatus(List<Long> eventIds, Status status) {
         return RequestMapper.mapToEventRequestShortDto(requestRepository.findByEventIdInAndStatus(eventIds, status));
     }
 
     @Override
+    @Transactional
     public long countByEventIdAndStatus(long eventId, Status status) {
         return requestRepository.countByEventIdAndStatus(eventId, status);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Optional<EventRequestShortDto> findByRequesterIdAndEventId(long userId, long eventId) {
+        Request request = requestRepository.findByRequesterIdAndEventId(userId, eventId)
+                .orElseThrow(() -> new NotFoundException("Request with user ID=" + userId + " and event ID=" + eventId + " was not found"));
+        return Optional.of(RequestMapper.mapToEventRequestShortDto(request));
     }
 
     private UserShortDto receiveUser(long userId) {

@@ -49,7 +49,6 @@ import java.util.stream.Collectors;
 @Service
 @RequiredArgsConstructor
 @FieldDefaults(level = AccessLevel.PRIVATE, makeFinal = true)
-@Transactional
 public class EventServiceImpl implements EventService {
     EventRepository eventRepository;
     LocationRepository locationRepository;
@@ -137,7 +136,6 @@ public class EventServiceImpl implements EventService {
     }
 
     @Override
-    @Transactional
     public EventFullDto editEvent(long eventId, UpdateEventAdminRequestDto updateEventAdminRequestDto) {
         Event event = receiveEvent(eventId);
         if (updateEventAdminRequestDto.getEventDate() != null && updateEventAdminRequestDto.getEventDate().isBefore(event.getCreated().plusHours(1))) {
@@ -213,6 +211,7 @@ public class EventServiceImpl implements EventService {
         return loadStatisticAndRequest(EventMapper.mapToEventFullDto(event, userShortDto));
     }
 
+    @Transactional(readOnly = true)
     @Override
     public EventFullDto findEventById(long eventId) {
         Event event = receiveEvent(eventId);
