@@ -22,7 +22,7 @@ public class ActionService {
 
     // сохранение истории действия пользователя в БД если изменился вес действия в большую сторону
     @Transactional
-    public void AddAction(long userId, long eventId, ActionType actionType, Instant timestamp) {
+    public void addAction(long userId, long eventId, ActionType actionType, Instant timestamp) {
         Optional<Action> oldActionOpt = repository.findByUserIdAndEventId(userId, eventId);
         if (oldActionOpt.isEmpty()) {
             Action action = new Action();
@@ -34,10 +34,14 @@ public class ActionService {
         } else {
             Action oldAction = oldActionOpt.get();
             double oldWeight = getUserActionWeight(oldAction.getActionType());
-            double newWeight = getUserActionWeight(ActionType.valueOf(actionType.name()));
-            if (newWeight > oldWeight) {
-                oldAction.setActionType(ActionType.valueOf(actionType.name()));
+            double newWeight = getUserActionWeight(actionType);
+            if (newWeight >= oldWeight) {
+                oldAction.setActionType(actionType);
                 oldAction.setTimestamp(timestamp);
+                Instant oldTimestamp = oldAction.getTimestamp();
+                if (oldTimestamp.isBefore(timestamp)) {
+                    oldAction.setTimestamp(timestamp);
+                }
                 repository.save(oldAction);
             }
         }

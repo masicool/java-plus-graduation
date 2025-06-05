@@ -9,12 +9,12 @@ import java.util.Optional;
 import java.util.Set;
 
 public interface ActionRepository extends JpaRepository<Action, Long> {
-    @Query("select a.eventId from Action a where a.userId = :userId and a.eventId in :otherEventId")
+    @Query("select distinct a.eventId from Action a where a.userId = :userId and a.eventId in :otherEventId")
     List<Long> findEventIdsByUserIdAndEventIdIn(long userId, Set<Long> otherEventId);
 
     Optional<Action> findByUserIdAndEventId(long userId, long eventId);
 
-    @Query("select a.eventId from Action a where a.userId = :userId order by a.timestamp desc limit :maxResult")
+    @Query("select distinct a.eventId from Action a where a.userId = :userId order by a.timestamp desc limit :maxResult")
     List<Long> findByUserIdOrderByTimestampDesc(long userId, int maxResult);
 
     List<Action> findAllByEventIdIn(Set<Long> eventIds);

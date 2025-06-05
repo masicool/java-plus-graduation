@@ -13,8 +13,6 @@ import ru.practicum.grpc.stats.recommendation.RecommendedEventProto;
 import ru.practicum.grpc.stats.recommendation.SimilarEventsRequestProto;
 import ru.practicum.grpc.stats.recommendation.UserPredictionsRequestProto;
 
-import java.util.stream.Stream;
-
 @Slf4j
 @RequiredArgsConstructor
 @GrpcService
@@ -25,8 +23,7 @@ public class AnalyzerController extends RecommendationsControllerGrpc.Recommenda
     public void getSimilarEvents(SimilarEventsRequestProto request, StreamObserver<RecommendedEventProto> responseObserver) {
         try {
             log.info("Received request for similar event ID = {} from user ID = {}", request.getEventId(), request.getUserId());
-            Stream<RecommendedEventProto> similarEvents = analyzerService.getSimilarEvents(request);
-            similarEvents.forEach(responseObserver::onNext);
+            analyzerService.getSimilarEvents(request).forEach(responseObserver::onNext);
             responseObserver.onCompleted();
         } catch (Exception e) {
             responseObserver.onError(
@@ -38,8 +35,7 @@ public class AnalyzerController extends RecommendationsControllerGrpc.Recommenda
     public void getRecommendationsForUser(UserPredictionsRequestProto request, StreamObserver<RecommendedEventProto> responseObserver) {
         try {
             log.info("Received request for recommendation for user ID = {}", request.getUserId());
-            Stream<RecommendedEventProto> similarEvents = analyzerService.getRecommendationsForUser(request);
-            similarEvents.forEach(responseObserver::onNext);
+            analyzerService.getRecommendationsForUser(request).forEach(responseObserver::onNext);
             responseObserver.onCompleted();
         } catch (Exception e) {
             responseObserver.onError(

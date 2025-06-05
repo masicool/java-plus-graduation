@@ -49,7 +49,7 @@ public class ActionProcessor implements Runnable {
                             record.topic(), record.partition(), record.offset(), record.value());
 
                     // сохраним историю действий пользователя в БД если изменился вес действия в большую сторону
-                    actionService.AddAction(record.value().getUserId(), record.value().getEventId(),
+                    actionService.addAction(record.value().getUserId(), record.value().getEventId(),
                             ActionType.valueOf(record.value().getActionType().name()),
                             record.value().getTimestamp());
 

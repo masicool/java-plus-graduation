@@ -14,7 +14,6 @@ import ru.practicum.grpc.stats.recommendation.UserPredictionsRequestProto;
 
 import java.util.*;
 import java.util.stream.Collectors;
-import java.util.stream.Stream;
 
 @Slf4j
 @RequiredArgsConstructor
@@ -24,7 +23,7 @@ public class AnalyzerService {
     private final SimilarityService similarityService;
     private final UserActionWeightConfig userActionWeightConfig;
 
-    public Stream<RecommendedEventProto> getSimilarEvents(SimilarEventsRequestProto request) {
+    public List<RecommendedEventProto> getSimilarEvents(SimilarEventsRequestProto request) {
         // выгрузим из базы данных все коэффициенты подобия для пары мероприятий, в которой одно (любое) соответствует указанному
         List<Similarity> similarPair = similarityService.findAllContainsEventId(request.getEventId());
 
@@ -47,20 +46,27 @@ public class AnalyzerService {
                 .map(o -> RecommendedEventProto.newBuilder()
                         .setEventId(o.getKey().getEventId() == request.getEventId() ? o.getKey().getOtherEventId() : o.getKey().getEventId())
                         .setScore(o.getScore())
-                        .build());
+                        .build()).toList();
     }
 
-    public Stream<RecommendedEventProto> getRecommendationsForUser(UserPredictionsRequestProto request) {
+    public List<RecommendedEventProto> getRecommendationsForUser(UserPredictionsRequestProto request) {
         // выгрузим ID мероприятий, с которыми пользователь уже взаимодействовал
         Set<Long> actionIds = actionService.findByUserIdOrderByTimestampDesc(request.getUserId(), request.getMaxResults());
 
-        // найдем N мероприятий, похожих на те, что отобрали, но при этом пользователь с ними не взаимодействовал
+        // найдем N мероприятий, похожих на те, что отобрали, но при этом пользователь с ними не взаимодействовал с ними обоими
         // отсортированные в убывающем порядке по коэффициенту схожести
         List<Similarity> similarities = similarityService.findNPairContainsEventIdsSortedDescScore(actionIds, request.getMaxResults());
-        return similarities.stream().map(o -> RecommendedEventProto.newBuilder()
-                .setEventId(actionIds.contains(o.getKey().getEventId()) ? o.getKey().getOtherEventId() : o.getKey().getEventId())
-                .setScore(o.getScore())
-                .build());
+
+        // выберем уникальные мероприятия из пар, с которыми пользователь не взаимодействовал
+        // и оставим максимальный коэффициент схожести
+        Map<Long, Double> eventIds = similarities.stream()
+                .collect(Collectors.toMap(o -> actionIds.contains(o.getKey().getEventId()) ? o.getKey().getOtherEventId() : o.getKey().getEventId(),
+                        Similarity::getScore, Double::max));
+
+        return eventIds.entrySet().stream().map(o -> RecommendedEventProto.newBuilder()
+                .setEventId(o.getKey())
+                .setScore(o.getValue())
+                .build()).toList();
     }
 
     public List<RecommendedEventProto> getInteractionsCount(InteractionsCountRequestProto request) {
