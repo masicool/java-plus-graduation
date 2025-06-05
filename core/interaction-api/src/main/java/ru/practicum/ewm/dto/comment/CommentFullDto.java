@@ -7,13 +7,14 @@ import ru.practicum.ewm.dto.user.UserShortDto;
 
 import java.time.LocalDateTime;
 
+import static ru.practicum.ewm.common.Constants.DATE_TIME_PATTERN;
+
 @Data
 @Builder
 @AllArgsConstructor
 @NoArgsConstructor
 @FieldDefaults(level = AccessLevel.PRIVATE)
 public class CommentFullDto {
-    private static final String DATE_TIME_PATTERN = "yyyy-MM-dd HH:mm:ss";
 
     long id;
     String text;

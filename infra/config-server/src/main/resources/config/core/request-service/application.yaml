@@ -17,5 +17,13 @@ resilience4j.circuitbreaker:
       slidingWindowSize: 10
       failureRateThreshold: 50
 
+grpc:
+  client:
+    collector:
+      address: 'discovery:///collector'
+      enableKeepAlive: true
+      keepAliveWithoutCalls: true
+      negotiationType: plaintext
+
 server:
   port: 0

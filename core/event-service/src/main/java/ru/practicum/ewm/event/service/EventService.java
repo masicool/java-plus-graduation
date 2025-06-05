@@ -23,4 +23,8 @@ public interface EventService {
     EventFullDto findEvent(long eventId);
 
     EventFullDto findEventById(long eventId);
+
+    void checkUserRegistrationAtEvent(long userId, long eventId);
+
+    List<EventFullDto> getRecommendationsForUser(long userId, int maxResults);
 }

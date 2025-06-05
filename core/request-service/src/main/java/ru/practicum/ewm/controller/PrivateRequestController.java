@@ -8,6 +8,7 @@ import ru.practicum.ewm.dto.EventRequestStatusUpdateRequest;
 import ru.practicum.ewm.dto.EventRequestStatusUpdateResult;
 import ru.practicum.ewm.dto.ParticipationRequestDto;
 import ru.practicum.ewm.service.RequestService;
+import ru.practicum.ewm.stats.client.CollectorClient;
 
 import java.util.List;
 
@@ -17,6 +18,7 @@ import java.util.List;
 public class PrivateRequestController {
 
     private final RequestService requestService;
+    private final CollectorClient collectorClient;
 
     @GetMapping("/requests")
     @ResponseStatus(HttpStatus.OK)
@@ -35,7 +37,9 @@ public class PrivateRequestController {
     @ResponseStatus(HttpStatus.CREATED)
     public ParticipationRequestDto createRequest(@PathVariable long userId,
                                                  @RequestParam long eventId) {
-        return requestService.createRequest(userId, eventId);
+        ParticipationRequestDto request = requestService.createRequest(userId, eventId);
+        collectorClient.sendRegistrationEvent(userId, eventId);
+        return request;
     }
 
     @PatchMapping("/events/{eventId}/requests")

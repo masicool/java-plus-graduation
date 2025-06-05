@@ -35,8 +35,8 @@ import ru.practicum.ewm.exception.type.RemoteServiceException;
 import ru.practicum.ewm.feign.CommentClient;
 import ru.practicum.ewm.feign.RequestClient;
 import ru.practicum.ewm.feign.UserClient;
-import ru.practicum.ewm.stats.client.StatClient;
-import ru.practicum.ewm.stats.dto.ViewStatsDto;
+import ru.practicum.ewm.stats.client.AnalyzerClient;
+import ru.practicum.grpc.stats.recommendation.RecommendedEventProto;
 
 import java.time.LocalDateTime;
 import java.util.Comparator;
@@ -54,9 +54,9 @@ public class EventServiceImpl implements EventService {
     LocationRepository locationRepository;
     UserClient userClient;
     CategoryRepository categoryRepository;
-    StatClient statClient;
-    RequestClient eventRequestClient;
+    RequestClient requestClient;
     CommentClient commentClient;
+    AnalyzerClient analyzerClient;
 
     @Override
     public EventFullDto addEvent(long userId, NewEventDto newEventDto) {
@@ -193,7 +193,7 @@ public class EventServiceImpl implements EventService {
                         .sorted(Comparator.comparing(EventShortDto::getEventDate))
                         .toList();
                 case VIEWS -> eventShortDtos = eventShortDtos.stream()
-                        .sorted(Comparator.comparing(EventShortDto::getViews))
+                        .sorted(Comparator.comparing(EventShortDto::getRating))
                         .toList();
             }
         }
@@ -217,6 +217,43 @@ public class EventServiceImpl implements EventService {
         Event event = receiveEvent(eventId);
         UserShortDto userShortDto = receiveUser(event.getInitiatorId());
         return EventMapper.mapToEventFullDto(event, userShortDto);
+    }
+
+    @Override
+    public void checkUserRegistrationAtEvent(long userId, long eventId) {
+        Event event = receiveEvent(eventId);
+        receiveUser(userId);
+        if (event.getState() != State.PUBLISHED) {
+            throw new NotFoundException("Event with id=" + eventId + " not published");
+        }
+        if (event.isRequestModeration() || event.getParticipantLimit() != 0) {
+            if (event.getInitiatorId() != userId && requestClient.findByRequesterIdAndEventId(userId, eventId)
+                    .filter(o -> o.getStatus() == Status.CONFIRMED).isEmpty()) {
+                throw new BadRequestException("User with id=" + userId + " cannot work with event ID=" + event);
+            }
+        }
+    }
+
+    @Override
+    public List<EventFullDto> getRecommendationsForUser(long userId, int maxResult) {
+        receiveUser(userId); // проверим, что пользователь такой есть
+        // получи список ID рекомендованных мероприятий для пользователя
+        List<Long> eventIds = analyzerClient.getRecommendationsForUser(userId, maxResult)
+                .map(RecommendedEventProto::getEventId).toList();
+        // выгрузим мероприятия по этому списку
+        List<Event> events = eventRepository.findByIdIn(eventIds);
+        // получим ID инициаторов мероприятий
+        Set<Long> initiatorIds = events.stream().map(Event::getInitiatorId).collect(Collectors.toSet());
+        // выгрузим инициаторов в мапу
+        Map<Long, UserShortDto> initiatorsMap = receiveUsers(initiatorIds.stream().toList()).stream()
+                .collect(Collectors.toMap(UserShortDto::getId, Function.identity()));
+        // замапим мероприятия в список DTO
+        List<EventFullDto> eventsFullDto = events.stream()
+                .map(o -> EventMapper.mapToEventFullDto(o, initiatorsMap.get(o.getInitiatorId()))).toList();
+        // загрузим статистику, рейтинги, запросы
+        loadStatisticAndRequestForList(eventsFullDto);
+
+        return eventsFullDto;
     }
 
     private void updateFields(Event event, UpdateEventFieldsEntity updateEventFieldsEntity) {
@@ -258,17 +295,13 @@ public class EventServiceImpl implements EventService {
         if (events == null || events.isEmpty()) {
             return List.of();
         }
-        LocalDateTime start = events.stream()
-                .map(Event::getCreated)
-                .min(LocalDateTime::compareTo)
-                .get();
-        List<String> uris = events.stream()
-                .map(event -> "/events/" + event.getId())
-                .toList();
-        List<EventRequestShortDto> requests = eventRequestClient.findByEventIdInAndStatus(events.stream()
+        List<EventRequestShortDto> requests = requestClient.findByEventIdInAndStatus(events.stream()
                 .map(Event::getId)
                 .toList(), Status.CONFIRMED);
-        List<ViewStatsDto> viewStats = statClient.getStat(start, LocalDateTime.now(), uris, true);
+
+        // получим рейтинг мероприятия из сервиса и обновим его в DTO
+        Map<Long, Double> ratingsMap = analyzerClient.getInteractionsCount(events.stream().map(Event::getId).toList());
+
         List<CommentFullDto> comments = commentClient.findByEventIdIn(events.stream()
                 .map(Event::getId)
                 .toList());
@@ -283,10 +316,7 @@ public class EventServiceImpl implements EventService {
                 .peek(event -> event.setConfirmedRequests(requests.stream()
                         .filter(request -> request.getEventId() == event.getId())
                         .count()))
-                .peek(event -> event.setViews(viewStats.stream()
-                        .filter(view -> view.getUri().equals("/events/" + event.getId()))
-                        .map(ViewStatsDto::getHits)
-                        .reduce(0L, Long::sum)))
+                .peek(event -> event.setRating(ratingsMap.getOrDefault(event.getId(), 0.0)))
                 .peek(event -> event.setComments(comments.stream()
                         .filter(comment -> comment.getEventId() == event.getId())
                         .count()))
@@ -294,12 +324,15 @@ public class EventServiceImpl implements EventService {
     }
 
     private EventFullDto loadStatisticAndRequest(EventFullDto event) {
-        long amountOfConfirmedRequests = eventRequestClient.countByEventIdAndStatus(event.getId(), Status.CONFIRMED);
+        long amountOfConfirmedRequests = requestClient.countByEventIdAndStatus(event.getId(), Status.CONFIRMED);
         event.setConfirmedRequests(amountOfConfirmedRequests);
-        long amountOfViews = statClient.getStat(event.getCreatedOn(), LocalDateTime.now(), List.of("/events/" + event.getId()), true).stream()
-                .map(ViewStatsDto::getHits)
-                .reduce(0L, Long::sum);
-        event.setViews(amountOfViews);
+
+        // получим рейтинг мероприятия из сервиса и обновим его в DTO
+        Map<Long, Double> ratingsMap = analyzerClient.getInteractionsCount(List.of(event.getId()));
+        event.setRating(ratingsMap.getOrDefault(event.getId(), 0.0));
+
+        long amountOfViews = 0;
+        event.setRating(amountOfViews);
         long amountOfComments = commentClient.countByEventId(event.getId());
         event.setComments(amountOfComments);
         return event;
@@ -309,17 +342,14 @@ public class EventServiceImpl implements EventService {
         if (events == null || events.isEmpty()) {
             return List.of();
         }
-        LocalDateTime start = events.stream()
-                .map(EventFullDto::getCreatedOn)
-                .min(LocalDateTime::compareTo)
-                .get();
-        List<String> uris = events.stream()
-                .map(event -> "/events/" + event.getId())
-                .toList();
-        List<EventRequestShortDto> requests = eventRequestClient.findByEventIdInAndStatus(events.stream()
+
+        List<EventRequestShortDto> requests = requestClient.findByEventIdInAndStatus(events.stream()
                 .map(EventFullDto::getId)
                 .toList(), Status.CONFIRMED);
-        List<ViewStatsDto> viewStats = statClient.getStat(start, LocalDateTime.now(), uris, true);
+
+        // получим рейтинги мероприятий из сервиса
+        Map<Long, Double> ratingsMap = analyzerClient.getInteractionsCount(events.stream().map(EventFullDto::getId).collect(Collectors.toList()));
+
         List<CommentFullDto> comments = commentClient.findByEventIdIn(events.stream()
                 .map(EventFullDto::getId)
                 .toList());
@@ -327,10 +357,7 @@ public class EventServiceImpl implements EventService {
                 .peek(event -> event.setConfirmedRequests(requests.stream()
                         .filter(request -> request.getEventId() == event.getId())
                         .count()))
-                .peek(event -> event.setViews(viewStats.stream()
-                        .filter(view -> view.getUri().equals("/events/" + event.getId()))
-                        .map(ViewStatsDto::getHits)
-                        .reduce(0L, Long::sum)))
+                .peek(event -> event.setRating(ratingsMap.getOrDefault(event.getId(), 0.0)))
                 .peek(event -> event.setComments(comments.stream()
                         .filter(comment -> comment.getEventId() == event.getId())
                         .count()))
@@ -394,6 +421,17 @@ public class EventServiceImpl implements EventService {
         }
     }
 
+    private List<UserShortDto> receiveUsers(List<Long> userIds) {
+        try {
+            return userClient.findByIdIn(userIds);
+        } catch (FeignException ex) {
+            if (ex.status() == HttpStatus.NOT_FOUND.value()) {
+                throw new NotFoundException("Same users with IDs " + userIds + " not found");
+            }
+            throw new RemoteServiceException("Error in the remote service 'user-service");
+        }
+    }
+
     private Map<Long, UserShortDto> receiveUsersByIds(Set<Long> userIds) {
         try {
             return userClient.findByIdIn(userIds.stream().toList()).stream()
@@ -419,7 +457,7 @@ public class EventServiceImpl implements EventService {
     }
 
     private boolean isEventAvailableByLimit(Event event) {
-        return event.getParticipantLimit() > eventRequestClient.countByEventIdAndStatus(event.getId(), Status.CONFIRMED);
+        return event.getParticipantLimit() > requestClient.countByEventIdAndStatus(event.getId(), Status.CONFIRMED);
     }
 
     private Location addLocation(LocationDto locationDto) {
