@@ -12,13 +12,13 @@ import ru.practicum.ewm.dto.event.LocationDto;
 
 import java.time.LocalDateTime;
 
+import static ru.practicum.ewm.common.Constants.DATE_TIME_PATTERN;
+
 @Data
 @AllArgsConstructor
 @NoArgsConstructor
 @FieldDefaults(level = AccessLevel.PRIVATE)
 public class NewEventDto {
-
-    private static final String DATE_TIME_PATTERN = "yyyy-MM-dd HH:mm:ss";
 
     @NotBlank(message = "Field 'annotation' cannot be null, empty or blank")
     @Size(min = 20, max = 2000, message = "Length of field 'annotation' should be in the range from 20 to 2000")

@@ -131,7 +131,7 @@ public class CommentServiceImpl implements CommentService {
         if (event.isRequestModeration() || event.getParticipantLimit() != 0) {
             if (event.getInitiator().getId() != user.getId() && requestClient.findByRequesterIdAndEventId(user.getId(), event.getId())
                     .filter(o -> o.getStatus() == Status.CONFIRMED).isEmpty()) {
-                throw new BadRequestException("User with id=" + user.getId() + " cannot work with comments");
+                throw new BadRequestException("User with id=" + user.getId() + " cannot work with event ID=" + event.getId());
             }
         }
     }

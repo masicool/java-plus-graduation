@@ -16,12 +16,13 @@ import ru.practicum.ewm.event.service.EventService;
 import java.time.LocalDateTime;
 import java.util.List;
 
+import static ru.practicum.ewm.common.Constants.DATE_TIME_PATTERN;
+
 @RestController
 @RequestMapping("/admin/events")
 @RequiredArgsConstructor
 public class AdminEventController {
 
-    private static final String DATE_TIME_PATTERN = "yyyy-MM-dd HH:mm:ss";
     private final EventService eventService;
 
     @GetMapping

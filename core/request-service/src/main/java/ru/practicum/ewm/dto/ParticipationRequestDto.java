@@ -7,14 +7,14 @@ import ru.practicum.ewm.dto.request.Status;
 
 import java.time.LocalDateTime;
 
+import static ru.practicum.ewm.common.Constants.DATE_TIME_PATTERN;
+
 @Data
 @Builder
 @AllArgsConstructor
 @NoArgsConstructor
 @FieldDefaults(level = AccessLevel.PRIVATE)
 public class ParticipationRequestDto {
-
-    private static final String DATE_TIME_PATTERN = "yyyy-MM-dd HH:mm:ss";
 
     @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = DATE_TIME_PATTERN)
     LocalDateTime created;

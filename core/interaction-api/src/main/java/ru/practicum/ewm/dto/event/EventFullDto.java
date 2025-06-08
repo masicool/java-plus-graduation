@@ -8,14 +8,14 @@ import ru.practicum.ewm.dto.user.UserShortDto;
 
 import java.time.LocalDateTime;
 
+import static ru.practicum.ewm.common.Constants.DATE_TIME_PATTERN;
+
 @Data
 @Builder
 @AllArgsConstructor
 @NoArgsConstructor
 @FieldDefaults(level = AccessLevel.PRIVATE)
 public class EventFullDto {
-
-    private static final String DATE_TIME_PATTERN = "yyyy-MM-dd HH:mm:ss";
 
     String annotation;
     CategoryDto category;
@@ -41,6 +41,6 @@ public class EventFullDto {
     boolean requestModeration;
     State state;
     String title;
-    long views;
+    double rating;
     long comments;
 }

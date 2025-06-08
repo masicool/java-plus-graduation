@@ -51,7 +51,7 @@ public class EventMapper {
         dto.setRequestModeration(event.isRequestModeration());
         dto.setState(event.getState());
         dto.setTitle(event.getTitle());
-        dto.setViews(0);
+        dto.setRating(0);
         dto.setComments(0);
         return dto;
     }
@@ -66,7 +66,7 @@ public class EventMapper {
         dto.setInitiator(user);
         dto.setPaid(event.isPaid());
         dto.setTitle(event.getTitle());
-        dto.setViews(0);
+        dto.setRating(0);
         dto.setComments(0);
         return dto;
     }

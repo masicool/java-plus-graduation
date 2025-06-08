@@ -16,8 +16,12 @@ import ru.practicum.ewm.compilation.repository.CompilationRepository;
 import ru.practicum.ewm.event.dto.EventShortDto;
 import ru.practicum.ewm.event.model.Event;
 import ru.practicum.ewm.event.repository.EventRepository;
+import ru.practicum.ewm.stats.client.AnalyzerClient;
 
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -26,6 +30,7 @@ public class CompilationServiceImpl implements CompilationService {
     final CompilationRepository compilationRepository;
     final EventRepository eventRepository;
     final ModelMapper modelMapper;
+    final AnalyzerClient analyzerClient;
 
     @Transactional
     @Override
@@ -52,9 +57,18 @@ public class CompilationServiceImpl implements CompilationService {
     @Transactional(readOnly = true)
     public List<CompilationDto> getCompilations(GetCompilationsParams params) {
         PageRequest pageRequest = PageRequest.of(params.getFrom(), params.getSize());
-        return compilationRepository.findAll(pageRequest).stream()
+        List<CompilationDto> compilations = compilationRepository.findAll(pageRequest).stream()
                 .map(compilation -> modelMapper.map(compilation, CompilationDto.class))
                 .toList();
+
+        // выгрузим информацию по рейтингам мероприятий
+        Set<Long> eventIds = compilations.stream()
+                .flatMap(e -> e.getEvents().stream())
+                .map(EventShortDto::getId).collect(Collectors.toSet());
+        Map<Long, Double> ratingsMap = analyzerClient.getInteractionsCount(eventIds.stream().toList());
+        compilations.forEach(o -> o.getEvents().forEach(e -> e.setRating(ratingsMap.getOrDefault(e.getId(), 0.0))));
+
+        return compilations;
     }
 
     @Transactional
@@ -84,6 +98,11 @@ public class CompilationServiceImpl implements CompilationService {
         CompilationDto result = modelMapper.map(compilation, CompilationDto.class);
         List<Event> events = eventRepository.getEventsByCompilationId(compilation.getId());
         result.setEvents(events.stream().map(event -> modelMapper.map(event, EventShortDto.class)).toList());
+
+        // выгрузим информацию по рейтингам мероприятий
+        Map<Long, Double> ratingsMap = analyzerClient.getInteractionsCount(events.stream().map(Event::getId).toList());
+        result.getEvents().forEach(o -> o.setRating(ratingsMap.getOrDefault(o.getId(), 0.0)));
+
         return result;
     }
 }

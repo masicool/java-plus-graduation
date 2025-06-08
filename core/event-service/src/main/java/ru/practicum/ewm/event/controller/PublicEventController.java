@@ -5,7 +5,6 @@ import jakarta.validation.constraints.Positive;
 import jakarta.validation.constraints.PositiveOrZero;
 import jakarta.validation.constraints.Size;
 import lombok.RequiredArgsConstructor;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
@@ -14,23 +13,21 @@ import ru.practicum.ewm.event.dto.EventShortDto;
 import ru.practicum.ewm.event.dto.FindAllEventsPublicParamEntity;
 import ru.practicum.ewm.event.model.EventSortAction;
 import ru.practicum.ewm.event.service.EventService;
-import ru.practicum.ewm.stats.client.StatClient;
-import ru.practicum.ewm.stats.dto.EndpointHitDto;
+import ru.practicum.ewm.stats.client.CollectorClient;
 
 import java.time.LocalDateTime;
 import java.util.List;
+
+import static ru.practicum.ewm.common.Constants.DATE_TIME_PATTERN;
+import static ru.practicum.ewm.common.Constants.USER_ID_HEADER;
 
 @RestController
 @RequestMapping("/events")
 @RequiredArgsConstructor
 public class PublicEventController {
 
-    private static final String DATE_TIME_PATTERN = "yyyy-MM-dd HH:mm:ss";
     private final EventService eventService;
-    private final StatClient statClient;
-
-    @Value("${spring.application.name}")
-    private String appName;
+    private final CollectorClient collectorClient;
 
     @GetMapping
     @ResponseStatus(HttpStatus.OK)
@@ -46,17 +43,27 @@ public class PublicEventController {
             @RequestParam(defaultValue = "10") @Positive int size,
             HttpServletRequest request) {
         FindAllEventsPublicParamEntity findAllEventsPublicParamEntity = new FindAllEventsPublicParamEntity(text, categories, paid, rangeStart, rangeEnd, onlyAvailable, sort, from, size);
-        List<EventShortDto> events = eventService.findAllEventsPublic(findAllEventsPublicParamEntity);
-        EndpointHitDto endpointHitDto = new EndpointHitDto(appName, request.getRequestURI(), request.getRemoteAddr(), LocalDateTime.now());
-        statClient.hit(endpointHitDto);
-        return events;
+        return eventService.findAllEventsPublic(findAllEventsPublicParamEntity);
     }
 
     @GetMapping("/{id}")
     @ResponseStatus(HttpStatus.OK)
-    public EventFullDto findEvent(@PathVariable long id, HttpServletRequest request) {
-        EndpointHitDto endpointHitDto = new EndpointHitDto("main-service", request.getRequestURI(), request.getRemoteAddr(), LocalDateTime.now());
-        statClient.hit(endpointHitDto);
-        return eventService.findEvent(id);
+    public EventFullDto findEvent(@RequestHeader(USER_ID_HEADER) long userId, @PathVariable long id) {
+        EventFullDto event = eventService.findEvent(id);
+        collectorClient.sendPreviewEvent(userId, id);
+        return event;
+    }
+
+    @PutMapping("/events/{eventId}/like")
+    @ResponseStatus(HttpStatus.OK)
+    public void likeEvent(@RequestHeader(USER_ID_HEADER) long userId, @PathVariable long id) {
+        eventService.checkUserRegistrationAtEvent(userId, id);
+        collectorClient.sendLikeEvent(userId, id);
+    }
+
+    @GetMapping("/recommendations")
+    @ResponseStatus(HttpStatus.OK)
+    public List<EventFullDto> getRecommendationsForUser(@RequestHeader(USER_ID_HEADER) long userId, @RequestParam int maxResults) {
+        return eventService.getRecommendationsForUser(userId, maxResults);
     }
 }
