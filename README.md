@@ -75,3 +75,28 @@
 2. [Проверка работоспособности сервиса статистики](https://github.com/masicool/java-plus-graduation/blob/main/postman/ewm-stat-service.json)
 3. [Проверка работоспособности сервиса комментариев](https://github.com/masicool/java-plus-graduation/blob/main/postman/feature.json)
 
+## Стек технологий
+- Java
+- Spring Boot
+- Spring Data
+- Spring Cloud (Config, Eureka, Gateway)
+- Hibernate
+- REST API
+- PostgreSQL
+- Lombok
+- Maven
+- Docker
+- Postman
+- Микросервисная архитектура
+- gRPC
+- Protobuf
+- AVRO
+- Kafka
+- Feign Client
+- Circuit Breaker
+
+## Инструкция по развертыванию
+- Склонировать репозиторий и перейдите в него
+- Выполнить команду mvn clean package
+- Выполнить команду docker-compose up -d
+- Каждый микросервис из каждого модуля запускается отдельно
